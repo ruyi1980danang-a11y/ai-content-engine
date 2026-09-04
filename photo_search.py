@@ -1,14 +1,15 @@
-import json
+from media_validator import validate_image
+from media_spec import get_media_spec
+
 import urllib.parse
 import urllib.request
+import json
 
 
 UNSPLASH_API_URL = "https://api.unsplash.com/search/photos"
 
 
-def search_photos(query, access_key, per_page=5):
-    if not query:
-        return []
+def search_unsplash(query, access_key, per_page=10):
 
     params = urllib.parse.urlencode({
         "query": query,
@@ -25,34 +26,100 @@ def search_photos(query, access_key, per_page=5):
         }
     )
 
-    with urllib.request.urlopen(
-        request,
-        timeout=30
-    ) as response:
+    with urllib.request.urlopen(request) as response:
         data = json.loads(
             response.read().decode("utf-8")
         )
 
-    results = []
+    photos = []
 
-    for photo in data.get("results", []):
-        results.append({
-            "photo_id": photo.get("id", ""),
-            "description": photo.get("description", ""),
-            "alt_description": photo.get(
-                "alt_description", ""
-            ),
-            "image_url": photo.get(
-                "urls", {}
-            ).get("regular", ""),
+    for item in data.get("results", []):
+
+        photo = {
+            "id": item.get("id"),
+            "width": item.get("width", 0),
+            "height": item.get("height", 0),
+            "url": item.get("urls", {}).get("regular", ""),
             "source": "Unsplash",
-            "source_url": photo.get(
-                "links", {}
-            ).get("html", ""),
-            "photographer": photo.get(
-                "user", {}
-            ).get("name", ""),
-            "license_status": "확인필요"
-        })
+            "author": item.get("user", {}).get("name", "")
+        }
 
-    return results
+        photos.append(photo)
+
+    return photos
+
+
+
+def filter_photos(photos):
+
+    approved = []
+
+    for photo in photos:
+
+        result = validate_image(
+            width=photo["width"],
+            height=photo["height"],
+            file_mb=1,
+            file_format="jpg",
+            media_type="BLOG_IMAGE"
+        )
+
+        if result["valid"]:
+            approved.append(photo)
+
+    return approved
+
+
+
+def score_photo(photo):
+
+    score = 0
+
+    spec = get_media_spec(
+        "BLOG_IMAGE"
+    )
+
+    if photo["width"] >= spec["preferred_width"]:
+        score += 40
+
+    if photo["height"] >= spec["preferred_height"]:
+        score += 40
+
+    score += 20
+
+    return score
+
+
+
+def select_best_photo(photos):
+
+    if not photos:
+        return None
+
+    ranked = sorted(
+        photos,
+        key=score_photo,
+        reverse=True
+    )
+
+    return ranked[0]
+
+
+
+def get_best_photo(
+    query,
+    access_key
+):
+
+    photos = search_unsplash(
+        query,
+        access_key
+    )
+
+    valid = filter_photos(
+        photos
+    )
+
+    return select_best_photo(
+        valid
+    )
