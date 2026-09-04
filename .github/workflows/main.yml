@@ -19,4 +19,5 @@ jobs:
       - name: Run AI Story Engine
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GOOGLE_SHEET_URL: "https://script.google.com/macros/s/AKfycbzG1LsC2UpRQt3WGpk-cwJ7uBVzsQ7zik1OURCQHAREJPn2YbrvYOJhi-h_USlU6ZYw4g/exec"
         run: python main.py
