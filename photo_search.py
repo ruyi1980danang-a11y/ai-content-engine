@@ -7,6 +7,8 @@ import json
 
 
 UNSPLASH_API_URL = "https://api.unsplash.com/search/photos"
+PEXELS_API_URL = "https://api.pexels.com/v1/search"
+PIXABAY_API_URL = "https://pixabay.com/api/"
 
 
 def search_unsplash(query, access_key, per_page=10):
