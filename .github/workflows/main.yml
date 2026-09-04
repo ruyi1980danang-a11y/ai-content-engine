@@ -3,6 +3,13 @@ name: AI Story Engine
 on:
   workflow_dispatch:
 
+concurrency:
+  group: ai-story-engine
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   run:
     runs-on: ubuntu-latest
@@ -16,8 +23,17 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Check required secrets
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "OPENAI_API_KEY가 설정되어 있지 않습니다."
+            exit 1
+          fi
+
       - name: Run AI Story Engine
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GOOGLE_SHEET_URL: "https://script.google.com/macros/s/AKfycbzG1LsC2UpRQt3WGpk-cwJ7uBVzsQ7zik1OURCQHAREJPn2YbrvYOJhi-h_USlU6ZYw4g/exec"
+          GOOGLE_SHEET_URL: "https://script.google.com/macros/s/AKfycbzG1LsC2UpRQt3WGpk-cwJ7uBVzsQ7zik1OURCQHAREJPnY2brvYOJhi-h_USlU6ZYw4g/exec"
         run: python main.py
