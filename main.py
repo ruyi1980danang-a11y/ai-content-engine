@@ -7,6 +7,8 @@ from pathlib import Path
 from datetime import datetime, timezone
 from photo_search import get_best_photo
 from media_pipeline import create_media_package
+from video_pipeline import create_video_package
+
 # ============================================================
 # AI STORY CONTENT ENGINE
 # main.py
