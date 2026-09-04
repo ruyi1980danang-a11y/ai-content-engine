@@ -5,7 +5,7 @@ import urllib.error
 import uuid
 from pathlib import Path
 from datetime import datetime, timezone
-
+from photo_search import get_best_photo
 
 # ============================================================
 # AI STORY CONTENT ENGINE
