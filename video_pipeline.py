@@ -6,7 +6,7 @@ def create_video_package(
     video_info=None
 ):
 
-    if not video_info:
+    if video_info is None:
         return {
             "status": "failed",
             "errors": [
@@ -15,7 +15,7 @@ def create_video_package(
         }
 
 
-    result = validate_video(
+    validation = validate_video(
         platform=platform,
         width=video_info.get("width", 0),
         height=video_info.get("height", 0),
@@ -28,14 +28,26 @@ def create_video_package(
     )
 
 
-    if not result["valid"]:
+    if not validation["valid"]:
+
         return {
             "status": "failed",
-            "errors": result["errors"]
+            "platform": platform,
+            "errors": validation["errors"]
         }
+
 
 
     return {
         "status": "success",
-        "video": video_info
+        "platform": platform,
+        "video": {
+            "width": video_info["width"],
+            "height": video_info["height"],
+            "seconds": video_info["seconds"],
+            "fps": video_info["fps"],
+            "format": video_info["format"],
+            "video_codec": video_info["video_codec"],
+            "audio_codec": video_info["audio_codec"]
+        }
     }
