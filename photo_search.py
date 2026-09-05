@@ -5,6 +5,7 @@ import json
 
 from media_validator import validate_image
 from media_spec import get_media_spec
+from media_ranker import select_best_photo
 
 
 UNSPLASH_API_URL = "https://api.unsplash.com/search/photos"
@@ -12,19 +13,12 @@ PEXELS_API_URL = "https://api.pexels.com/v1/search"
 PIXABAY_API_URL = "https://pixabay.com/api/"
 
 
-# ============================================================
-# SEARCH LIMIT CONTROL
-# ============================================================
-
 MAX_RESULTS_PER_SOURCE = 5
 
 MIN_WIDTH = 1200
 MIN_HEIGHT = 700
 
 
-# ============================================================
-# UNSPLASH
-# ============================================================
 
 def search_unsplash(query, access_key):
 
@@ -65,10 +59,6 @@ def search_unsplash(query, access_key):
 
 
 
-# ============================================================
-# PEXELS
-# ============================================================
-
 def search_pexels(query, api_key):
 
     params = urllib.parse.urlencode({
@@ -108,10 +98,6 @@ def search_pexels(query, api_key):
 
 
 
-# ============================================================
-# PIXABAY
-# ============================================================
-
 def search_pixabay(query, api_key):
 
     params = urllib.parse.urlencode({
@@ -148,10 +134,6 @@ def search_pixabay(query, api_key):
 
 
 
-# ============================================================
-# QUALITY FILTER
-# ============================================================
-
 def filter_photos(photos):
 
     approved = []
@@ -182,59 +164,7 @@ def filter_photos(photos):
 
 
 
-# ============================================================
-# PHOTO SCORING
-# ============================================================
-
-def score_photo(photo):
-
-    score = 0
-
-
-    if photo["width"] >= 1600:
-        score += 40
-
-    if photo["height"] >= 900:
-        score += 40
-
-
-    if photo["source"] == "Unsplash":
-        score += 20
-
-    elif photo["source"] == "Pexels":
-        score += 15
-
-    else:
-        score += 10
-
-
-    return score
-
-
-
-def select_best_photo(photos):
-
-    if not photos:
-        return None
-
-
-    ranked = sorted(
-        photos,
-        key=score_photo,
-        reverse=True
-    )
-
-
-    return ranked[0]
-
-
-
-# ============================================================
-# MAIN FUNCTION
-# ============================================================
-
 def get_best_photo(query):
-
 
     all_photos = []
 
@@ -252,9 +182,7 @@ def get_best_photo(query):
     )
 
 
-
     if unsplash_key:
-
         all_photos.extend(
             search_unsplash(
                 query,
@@ -264,7 +192,6 @@ def get_best_photo(query):
 
 
     if pexels_key:
-
         all_photos.extend(
             search_pexels(
                 query,
@@ -274,14 +201,12 @@ def get_best_photo(query):
 
 
     if pixabay_key:
-
         all_photos.extend(
             search_pixabay(
                 query,
                 pixabay_key
             )
         )
-
 
 
     valid_photos = filter_photos(
