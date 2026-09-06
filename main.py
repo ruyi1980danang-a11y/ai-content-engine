@@ -19,25 +19,6 @@ OPENAI_API_URL = "https://api.openai.com/v1/responses"
 MODEL = "gpt-5.6-sol"
 
 # ------------------------------------------------------------
-# COST CONTROL
-# ------------------------------------------------------------
-
-MONTHLY_LIMIT_USD = 150.00
-DAILY_LIMIT_USD = 10.00
-RUN_LIMIT_USD = 5.00
-SOURCE_LIMIT_USD = 1.00
-
-MAX_REGENERATIONS_PER_SOURCE = 2
-
-INPUT_PRICE_PER_1M = 4.00
-OUTPUT_PRICE_PER_1M = 20.00
-
-COST_SAFETY_FACTOR = 1.20
-
-MAX_OUTPUT_TOKENS = 12000
-
-
-# ------------------------------------------------------------
 # 12 ACCOUNTS
 # ------------------------------------------------------------
 
@@ -55,65 +36,6 @@ ACCOUNTS = [
     ("Devil 50", "DEVIL"),
     ("Devil 60", "DEVIL"),
 ]
-
-
-# ============================================================
-# COST
-# ============================================================
-
-def estimate_cost(input_tokens, output_tokens):
-    input_cost = (
-        input_tokens / 1_000_000
-    ) * INPUT_PRICE_PER_1M
-
-    output_cost = (
-        output_tokens / 1_000_000
-    ) * OUTPUT_PRICE_PER_1M
-
-    return (
-        input_cost + output_cost
-    ) * COST_SAFETY_FACTOR
-
-
-def count_tokens_estimate(text):
-    if not text:
-        return 0
-
-    return max(1, len(text) // 4)
-
-
-def check_source_cost(input_text, master_prompt):
-    estimated_input_tokens = (
-        count_tokens_estimate(master_prompt)
-        + count_tokens_estimate(input_text)
-    )
-
-    estimated_output_tokens = MAX_OUTPUT_TOKENS
-
-    estimated_cost = estimate_cost(
-        estimated_input_tokens,
-        estimated_output_tokens
-    )
-
-    print(
-        f"예상 최대 실행 비용: ${estimated_cost:.4f}"
-    )
-
-    if estimated_cost > RUN_LIMIT_USD:
-        raise RuntimeError(
-            "COST_LIMIT_STOP: "
-            f"예상 실행 비용 ${estimated_cost:.4f} "
-            f"> 실행 한도 ${RUN_LIMIT_USD:.2f}"
-        )
-
-    if estimated_cost > SOURCE_LIMIT_USD:
-        raise RuntimeError(
-            "COST_LIMIT_STOP: "
-            f"예상 소재 비용 ${estimated_cost:.4f} "
-            f"> 소재 한도 ${SOURCE_LIMIT_USD:.2f}"
-        )
-
-    return estimated_cost
 
 
 # ============================================================
@@ -257,9 +179,6 @@ def build_schema():
             "keywords": {
                 "type": "string"
             },
-            "story_memory": {
-                "type": "string"
-            },
             "character_count": {
                 "type": "integer"
             },
@@ -313,7 +232,6 @@ def build_schema():
             "story",
             "photo_plan",
             "keywords",
-            "story_memory",
             "character_count",
             "quality_result",
             "video_decision",
@@ -409,13 +327,13 @@ MASTER_PROMPT의 모든 규칙을 반드시 적용한다.
 2. 12개 콘텐츠는 서로 독립적이어야 한다.
 
 3. 단순히 제목이나 문장만 바꾸는 방식으로
-   같은 글을 복제하지 않는다.
+    같은 글을 복제하지 않는다.
 
 4. 각 계정의 관점, 질문, 해석, 이야기 구조,
-   인간적 관심사를 자연스럽게 차별화한다.
+    인간적 관심사를 자연스럽게 차별화한다.
 
 5. Angel/Devil 성격을 기계적인 선악 구도로
-   만들지 않는다.
+    만들지 않는다.
 
 6. 나이는 고정된 성격이나 편견으로 사용하지 않는다.
 
@@ -424,7 +342,7 @@ MASTER_PROMPT의 모든 규칙을 반드시 적용한다.
 8. 약한 자료를 억지로 긴 이야기로 늘리지 않는다.
 
 9. STORY는 최대 3,000자이며
-   3,000자를 채우는 것이 목적이 아니다.
+    3,000자를 채우는 것이 목적이 아니다.
 
 10. 품질이 부족하면 QUALITY RESULT를
     REWRITE 또는 DISCARD로 판단한다.
@@ -455,16 +373,11 @@ MASTER_PROMPT의 모든 규칙을 반드시 적용한다.
 {account_instruction}
 """
 
-    estimated_cost = check_source_cost(
-        input_text,
-        master_prompt
-    )
-
     request_data = {
         "model": MODEL,
         "instructions": master_prompt,
         "input": input_text,
-        "max_output_tokens": MAX_OUTPUT_TOKENS,
+        "max_output_tokens": 12000,
         "text": {
             "format": build_schema()
         }
@@ -499,19 +412,6 @@ MASTER_PROMPT의 모든 규칙을 반드시 적용한다.
             errors="replace"
         )
 
-        if any(
-            keyword in error_body
-            for keyword in [
-                "spend_limit",
-                "insufficient_quota",
-                "usage_limit"
-            ]
-        ):
-            raise RuntimeError(
-                "COST_LIMIT_STOP: "
-                f"{error_body}"
-            )
-
         raise RuntimeError(
             f"OpenAI API 오류: {error_body}"
         )
@@ -536,61 +436,11 @@ MASTER_PROMPT의 모든 규칙을 반드시 적용한다.
             f"{error}"
         )
 
-    usage = result.get(
-        "usage",
-        {}
-    )
-
-    input_tokens = usage.get(
-        "input_tokens",
-        count_tokens_estimate(
-            master_prompt
-        ) + count_tokens_estimate(
-            input_text
-        )
-    )
-
-    output_tokens = usage.get(
-        "output_tokens",
-        count_tokens_estimate(
-            output_text
-        )
-    )
-
-    actual_cost = estimate_cost(
-        input_tokens,
-        output_tokens
-    )
-
-    print(
-        f"실제 추정 API 비용: ${actual_cost:.6f}"
-    )
-
-    if actual_cost > RUN_LIMIT_USD:
-        raise RuntimeError(
-            "COST_LIMIT_STOP: "
-            f"실제 추정 실행 비용 "
-            f"${actual_cost:.6f} "
-            f"> ${RUN_LIMIT_USD:.2f}"
-        )
-
-    if actual_cost > SOURCE_LIMIT_USD:
-        raise RuntimeError(
-            "COST_LIMIT_STOP: "
-            f"실제 추정 소재 비용 "
-            f"${actual_cost:.6f} "
-            f"> ${SOURCE_LIMIT_USD:.2f}"
-        )
-
     return {
         "accounts": structured.get(
             "accounts",
             []
-        ),
-        "input_tokens": input_tokens,
-        "output_tokens": output_tokens,
-        "estimated_cost_usd": actual_cost,
-        "estimated_max_cost_usd": estimated_cost
+        )
     }
 
 
@@ -694,8 +544,7 @@ def account_to_sheet_row(
     material,
     original_data,
     source_id,
-    run_id,
-    source_cost
+    run_id
 ):
 
     now = datetime.now(
@@ -821,22 +670,6 @@ def account_to_sheet_row(
 
         "영상결과": "",
 
-        "검색횟수": 0,
-
-        "검색비용": 0,
-
-        "AI비용": source_cost,
-
-        "이미지검색비용": 0,
-
-        "영상검색비용": 0,
-
-        "영상생성비용": 0,
-
-        "총비용": source_cost,
-
-        "재생성횟수": 0,
-
         "실행ID": run_id,
 
         "소재ID": source_id,
@@ -859,8 +692,6 @@ def account_to_sheet_row(
 
         "성과점수": "",
 
-        "학습반영": "미반영",
-
         "프롬프트버전": "MASTER_PROMPT",
 
         "모델버전": MODEL
@@ -879,18 +710,6 @@ def main():
 
     print(
         f"모델: {MODEL}"
-    )
-
-    print(
-        f"월간 전체 비용 상한: ${MONTHLY_LIMIT_USD:.2f}"
-    )
-
-    print(
-        f"1회 실행 상한: ${RUN_LIMIT_USD:.2f}"
-    )
-
-    print(
-        f"소재 1개 상한: ${SOURCE_LIMIT_USD:.2f}"
     )
 
     master_prompt = load_master_prompt()
@@ -960,11 +779,6 @@ def main():
     source_id = create_source_id()
     run_id = create_run_id()
 
-    source_cost = result.get(
-        "estimated_cost_usd",
-        0
-    )
-
     rows = []
 
     for account in accounts:
@@ -974,8 +788,7 @@ def main():
             material=material,
             original_data=original_data,
             source_id=source_id,
-            run_id=run_id,
-            source_cost=source_cost
+            run_id=run_id
         )
 
         rows.append(row)
