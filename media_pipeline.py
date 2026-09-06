@@ -2,11 +2,14 @@ from photo_search import get_best_photo
 from media_validator import validate_image
 from media_ranker import select_best_photo
 from media_cost import calculate_cost
+from diversity_controller import get_next_tone_category
 
 
 def create_media_package(
     keyword
 ):
+
+    tone_constraint = get_next_tone_category()
 
     photo_candidates = get_best_photo(
         keyword
@@ -17,7 +20,8 @@ def create_media_package(
         return {
             "status": "failed",
             "photo": None,
-            "reason": "검색 결과 없음"
+            "reason": "검색 결과 없음",
+            "tone_constraint": tone_constraint
         }
 
 
@@ -61,7 +65,8 @@ def create_media_package(
         return {
             "status": "failed",
             "photo": None,
-            "reason": "검증 통과 사진 없음"
+            "reason": "검증 통과 사진 없음",
+            "tone_constraint": tone_constraint
         }
 
 
@@ -79,5 +84,6 @@ def create_media_package(
     return {
         "status": "success",
         "photo": best_photo,
-        "cost": cost
+        "cost": cost,
+        "tone_constraint": tone_constraint
     }
