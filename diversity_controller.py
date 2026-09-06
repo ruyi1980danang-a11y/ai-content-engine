@@ -68,6 +68,27 @@ def get_next_tone_category(sheet_name="시트1", limit=5):
         print(f"Error in diversity controller: {e}")
         return "Info" # 오류 발생 시 기본값 반환
 
+def save_tone_category(tone, sheet_name="시트1"):
+    """
+    사용된 톤을 구글 시트 AZ열(Tone_Category)의 다음 빈 행에 기록합니다.
+    """
+    try:
+        client = get_google_sheet_client()
+        spreadsheet = client.open("자동화")
+        worksheet = spreadsheet.worksheet(sheet_name)
+        
+        az_values = worksheet.col_values(52)
+        next_row = len(az_values) + 1 if len(az_values) > 0 else 1
+        
+        if next_row == 1:
+            worksheet.update_cell(1, 52, "Tone_Category")
+            next_row = 2
+            
+        worksheet.update_cell(next_row, 52, tone)
+        
+    except Exception as e:
+        print(f"Error saving tone category: {e}")
+
 if __name__ == "__main__":
     # 단독 테스트용
     next_tone = get_next_tone_category()
